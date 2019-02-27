@@ -115,3 +115,4 @@ print("the prediction of 1,1,1 = ",model.predict(np.array([1,1,1])))
 print("the prediction of 0,0,1 = ",model.predict(np.array([0,0,1])))
 print("the prediction of 1,0,1 = ",model.predict(np.array([1,0,1])))
 print("the prediction of 0,1,1 = ",model.predict(np.array([0,1,1])))
+
