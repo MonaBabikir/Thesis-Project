@@ -143,6 +143,12 @@ NN_model.summary()
 # NN_model.fit(train, target, epochs=50, batch_size=32, validation_split = 0.2, callbacks=callbacks_list)
 NN_model.fit(train, target, epochs=50, batch_size=32, validation_split = 0.2)
 
+
+##evaluation
+model_evaluation = NN_model.evaluate(train, target, batch_size=32 , verbose=1)
+print("Model Evaluation: \n",NN_model.metrics_names,  model_evaluation,"\n")
+
+
 from keras import backend as K
 inp = NN_model.input
 outputs = [layer.output for layer in NN_model.layers] ##outputs of each layer
