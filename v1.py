@@ -50,11 +50,13 @@ print("input features : ", list(train_set))
 
 ## Dimentionality reduction using PCA, "https://www.kaggle.com/xyz8983/pca-2-layer-neural-network-in-python" ,
 pca = PCA()
-pca_fit = pca.fit(train_set)
-train_set = pca_fit.transform(train_set)
-test_set = pca_fit.transform(test_set)
-explained_variance = pca_fit.explained_variance_ratio_
-print("PCA explained variance : ", explained_variance)
+# pca_fit = pca.fit(train_set, 3)
+# train_set = pca_fit.transform(train_set)
+# test_set = pca_fit.transform(test_set)
+
+train_set = pca.fit_transform(train_set)
+test_set = pca.transform(test_set)
+
 # #print("train and test new component: ", list(train_set), "\n" ,list(test_set))
 print("set shape after pca :", train_set.shape , "  ", test_set.shape)
 
