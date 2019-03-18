@@ -15,6 +15,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+from keras.models import load_model
 
 
 num_classes = 20
@@ -125,41 +126,36 @@ def load_data_random(): #"https://github.com/kwananth/VMWorkloadPredictor/blob/m
 ####################
 #plotting_cpu_timeseries()
 
-#train_set, train_target, test_set, test_target = load_data()
-train_set, train_target, test_set, test_target =load_data_random()
+train_set, train_target, test_set, test_target = load_data()
+#train_set, train_target, test_set, test_target =load_data_random()
 
 ### scaling data
-# scaler1 = StandardScaler()
-# scaler2 = StandardScaler()
-# train_set = scaler1.fit_transform(train_set)
-# test_set = scaler2.fit_transform(test_set)
+scaler1 = StandardScaler()
+scaler2 = StandardScaler()
+train_set = scaler1.fit_transform(train_set)
+test_set = scaler2.fit_transform(test_set)
 
 ### end of scaling
 
 
+##### reshaping the data for LSTM network [samples , timestep, features]
+train_set = np.reshape(train_set, (train_set.shape[0] , 1, train_set.shape[1] ))
+test_set = np.reshape(test_set, (test_set.shape[0] , 1, test_set.shape[1] ))
+#### end of reshaping
+
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense , LSTM
 ## Building the model
 NN_model = Sequential()
 
 ## Add layers to the network
 # "https://keras.io/layers/core/" description of Dense function to add layers
-NN_model.add(Dense(95, kernel_initializer='normal',input_dim = train_set.shape[1], activation='relu'))
-#NN_model.add(Dense(20, kernel_initializer='normal', activation='relu'))
-NN_model.add(Dense(1, kernel_initializer='normal',activation='relu'))
+#NN_model.add(Dense(85, kernel_initializer='normal',input_dim = train_set.shape[1], activation='relu'))
+#NN_model.add(Dense(1, kernel_initializer='normal',activation='relu'))
 #lstm layer
-
-############
-#NN_model.add(Dense(128, kernel_initializer='normal',input_dim = train_set.shape[1], activation='relu'))
-
-# # The Hidden Layers :
-#NN_model.add(Dense(256, kernel_initializer='normal',activation='relu'))
-#NN_model.add(Dense(256, kernel_initializer='normal',activation='relu'))
-#NN_model.add(Dense(256, kernel_initializer='normal',activation='relu'))
-#
-# # The Output Layer :
-#NN_model.add(Dense(1, kernel_initializer='normal',activation='linear'))
-#############
+look_back = 10
+NN_model.add(LSTM(90, input_shape=(1, look_back)))
+NN_model.add(Dense(1))
 
 print(NN_model.summary())
 #plot_model(NN_model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
@@ -171,39 +167,39 @@ NN_model.compile(loss='mse', optimizer='adam', metrics=['accuracy']) #'mean_abso
 
 ## Train the model
 # "https://keras.io/models/sequential/" description of 'fit' function which is used for model training.
-model_training = NN_model.fit(train_set, train_target, epochs=500, batch_size=32, validation_split = 0.1)
+model_training = NN_model.fit(train_set, train_target, epochs=50, batch_size=1, validation_split = 0.1)
 print("Data saved in history: \n", print(model_training.history.keys()))
 print("Model Training History: \n" , model_training.history , "\n")
 
 ## Evaluate the
-model_evaluation_test = NN_model.evaluate(test_set, test_target, batch_size=32 , verbose=1)
-model_evaluation_train = NN_model.evaluate(train_set, train_target, batch_size=32 , verbose=1)
+model_evaluation_test = NN_model.evaluate(test_set, test_target, batch_size=1 , verbose=1)
+model_evaluation_train = NN_model.evaluate(train_set, train_target, batch_size=1 , verbose=1)
 print("Model Evaluation (testset evaluation): \n",NN_model.metrics_names,  model_evaluation_test,"\n")
 print("trainset evaluation): \n",NN_model.metrics_names,  model_evaluation_train,"\n")
 
+## Save the model # https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model
+NN_model.save('my_model.h5')
+# NN_model = load_model('my_model.h5')
 
 ## prediction
-# model_prediction_1 = NN_model.predict(np.array([[0.572777778 ,0.608333333, 0.571666667 , 0.592777778 , 0.59, 0.569444444, 0.572777778 , 4.341111111 , 70.36666667 , 53.13888889]])) # actual value = 92.60757937
-# print("model prediction : ", model_prediction_1)
-
-print("\nfirst data example : ", train_set.iloc[1000] , "  ," , train_target.iloc[1000])
-model_prediction_1 = NN_model.predict(np.array([train_set.iloc[1000]])) # actual value = 92.60757937
+print("\nfirst data example : ", train_set[1000] , "  ," , train_target[1000])
+model_prediction_1 = NN_model.predict(np.array([train_set[1000]])) # actual value = 92.60757937
 print("model prediction : ", model_prediction_1)
 
-print("\n\n second data example : ", train_set.iloc[100] , "  ," , train_target.iloc[100])
-model_prediction_1 = NN_model.predict(np.array([train_set.iloc[100]])) # actual value = 92.60757937
+print("\n\n second data example : ", train_set[100] , "  ," , train_target[100])
+model_prediction_1 = NN_model.predict(np.array([train_set[100]])) # actual value = 92.60757937
 print("model prediction : ", model_prediction_1)
 
-print("\n\n third data example : ", train_set.iloc[400] , "  ," , train_target.iloc[400])
-model_prediction_1 = NN_model.predict(np.array([train_set.iloc[400]])) # actual value = 92.60757937
+print("\n\n third data example : ", train_set[400] , "  ," , train_target[400])
+model_prediction_1 = NN_model.predict(np.array([train_set[400]])) # actual value = 92.60757937
 print("model prediction : ", model_prediction_1)
 
 
 ########## modeling using scikit linear regression model.
-reg_model = LinearRegression()
-reg_model.fit(train_set,train_target)
-test_prediction = reg_model.predict(test_set)
-print("Linear Regression mean square error : ", mean_squared_error(test_target, test_prediction))
+# reg_model = LinearRegression()
+# reg_model.fit(train_set,train_target)
+# test_prediction = reg_model.predict(test_set)
+# print("Linear Regression mean square error : ", mean_squared_error(test_target, test_prediction))
 
 # reg_model = LogisticRegression()
 # reg_model.fit(train_set,train_target)
