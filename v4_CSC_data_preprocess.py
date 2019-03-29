@@ -1,3 +1,6 @@
+### converting timeseries data to supervised learning problem (https://machinelearningmastery.com/convert-time-series-supervised-learning-problem-python/)
+
+
 import os
 import pandas as pd
 
@@ -193,13 +196,30 @@ def window_data(file_path):
     data = pd.read_csv(file_path, header=None)
     data.columns = ['Time', 'Cpu_t', 'Power']
     data.drop(['Power' , 'Time'] , axis=1 , inplace=True)
+
+
     data['Cpu_t+1'] = data['Cpu_t'].shift(-1)
     data['Cpu_t+2'] = data['Cpu_t+1'].shift(-1)
     data['Cpu_t+3'] = data['Cpu_t+2'].shift(-1)
+    #data['Cpu_t+4'] = data['Cpu_t+3'].shift(-1)
     data.dropna(inplace=True)
     #print(data)
     return data
 
-window_data("./real_data_prepared/epouta/e101_epouta_csc_fi.csv")
+def window_data_general(file_path , lock_back):
+    #data = pd.read_csv("./real_data_prepared/epouta/e101_epouta_csc_fi.csv", header=None)
+    data = pd.read_csv(file_path, header=None)
+    data.columns = ['Time', 'Cpu_t+0', 'Power']
+    data.drop(['Power' , 'Time'] , axis=1 , inplace=True)
+
+    for i in range(lock_back):
+         data['Cpu_t+'+ str(i+1)] = data['Cpu_t+'+ str(i)].shift(-1)
+
+    data.dropna(inplace=True)
+    #print(data)
+    return data
+
+
+#window_data_general("./real_data_prepared/epouta/e101_epouta_csc_fi.csv" , 3 )
 
 
