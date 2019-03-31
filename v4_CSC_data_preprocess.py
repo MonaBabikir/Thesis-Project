@@ -3,6 +3,7 @@
 
 import os
 import pandas as pd
+from datetime import datetime
 
 ## data preprocessing to put all the data together
 def aggregate_data():
@@ -221,5 +222,24 @@ def window_data_general(file_path , lock_back):
 
 
 #window_data_general("./real_data_prepared/epouta/e101_epouta_csc_fi.csv" , 3 )
+
+def time_cpu_data(file_path):
+    data = pd.read_csv(file_path, header=None)
+    data.columns = ['Time', 'Cpu_t', 'Power']
+    data.drop(['Power'], axis=1, inplace=True)
+    print(type(data['Time']))
+    #print(data['Time'])
+    df = data['Time']
+    #data['new Time'] = pd.to_datetime((data['Time']))
+    data['new Time'] = df.apply(pd.to_datetime , errors='coerce', utc=True ) #, errors='coerce'
+
+    print(data.iloc[56])
+    print(data.iloc[57])
+
+time_cpu_data("./real_data_prepared/epouta/e101_epouta_csc_fi.csv")
+
+
+
+
 
 
