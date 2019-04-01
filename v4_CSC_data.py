@@ -47,14 +47,14 @@ label_data = data['Cpu_t+'+ str(lock_back)]
 in_data = data.drop(['Cpu_t+' + str(lock_back)], axis=1)
 
 ## train data split in order
-n = int(float(data.shape[0]) * 0.8)
-train_data = in_data[:n]
-train_labels = label_data[:n]
-test_data = in_data[n:]
-test_labels = label_data[n:]
+# n = int(float(data.shape[0]) * 0.8)
+# train_data = in_data[:n]
+# train_labels = label_data[:n]
+# test_data = in_data[n:]
+# test_labels = label_data[n:]
 
 ## train data split in randomly
-#train_data, test_data, train_labels, test_labels = train_test_split(in_data, label_data, test_size=0.2, random_state=42)
+train_data, test_data, train_labels, test_labels = train_test_split(in_data, label_data, test_size=0.2, random_state=42)
 
 print(train_data)
 print(train_data.shape)
@@ -128,31 +128,31 @@ def build_lstm_model( train_set , test_set , input_data):
 
 
 
-#NN_model = build_model()
-NN_model , train_data , test_data , in_data = build_lstm_model(train_data , test_data , in_data)
+NN_model = build_model()
+#NN_model , train_data , test_data , in_data = build_lstm_model(train_data , test_data , in_data)
 
 
 Model_Checkpoint = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='min', verbose=1, save_best_only=True)
 
 # ## model fitting
 ## normal:
-#model_training = NN_model.fit(train_data, train_labels, epochs=1000, batch_size=32, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint]) #validation_split = 0.2
+model_training = NN_model.fit(train_data, train_labels, epochs=1000, batch_size=32, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint]) #validation_split = 0.2
 ##lstm:
-epochs_no = 1000
-for i in range(epochs_no):
-    loss_his = []
-    val_loss_his = []
-    model_training = NN_model.fit(train_data, train_labels, epochs=1, batch_size=1, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
-    loss_his.append(model_training.history['loss'])
-    val_loss_his.append(model_training.history['val_loss'])
-    NN_model.reset_states()
+# epochs_no = 1000
+# for i in range(epochs_no):
+#     loss_his = []
+#     val_loss_his = []
+#     model_training = NN_model.fit(train_data, train_labels, epochs=1, batch_size=1, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
+#     loss_his.append(model_training.history['loss'])
+#     val_loss_his.append(model_training.history['val_loss'])
+#     NN_model.reset_states()
 # print("Data saved in history: \n", print(model_training.history.keys()))
 # print("Model Training History: \n" , model_training.history , "\n")
 #
 # ## model evaluation
-model_evaluation_test = NN_model.evaluate(test_data, test_labels, batch_size=1 , verbose=0)
-model_evaluation_train = NN_model.evaluate(train_data, train_labels, batch_size=1 , verbose=0)
-model_evaluation_alldata = NN_model.evaluate(in_data, label_data, batch_size=1 , verbose=0)
+model_evaluation_test = NN_model.evaluate(test_data, test_labels, batch_size=32 , verbose=0)
+model_evaluation_train = NN_model.evaluate(train_data, train_labels, batch_size=32 , verbose=0)
+model_evaluation_alldata = NN_model.evaluate(in_data, label_data, batch_size=32 , verbose=0)
 print("trainset evaluation _on the final model: \n",NN_model.metrics_names,  model_evaluation_train,"\n")
 print("Model Evaluation (testset evaluation) _on the final model: \n",NN_model.metrics_names,  model_evaluation_test,"\n")
 print("the whole model evaluation _on the final model: \n" , NN_model.metrics_names,  model_evaluation_alldata , "\n")
@@ -202,7 +202,7 @@ def build_lstm_model_cv():
 seed = 7
 np.random.seed(seed)
 # evaluate model with standardized dataset
-estimator = KerasRegressor(build_fn=build_lstm_model_cv, epochs=1000, batch_size=1, verbose=0)
+estimator = KerasRegressor(build_fn=build_model, epochs=1000, batch_size=1, verbose=0)
 
 kfold = KFold(n_splits=10, random_state=seed)
 scores = cross_val_score(estimator, in_data, label_data, cv=kfold)
@@ -255,10 +255,10 @@ print("Results: %.10f MSE" % (np.mean(scores)))
 
 #
 # ### neural network loss(MSE) plotting (https://machinelearningmastery.com/display-deep-learning-model-training-history-in-keras/)
-#plt.plot(model_training.history['loss'] , label='train')
-#plt.plot(model_training.history['val_loss'] , label='test')
-plt.plot(loss_his , label='train')
-plt.plot(val_loss_his , label='test')
+plt.plot(model_training.history['loss'] , label='train')
+plt.plot(model_training.history['val_loss'] , label='test')
+#plt.plot(loss_his , label='train')
+#plt.plot(val_loss_his , label='test')
 plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')

@@ -21,15 +21,20 @@ from sklearn.model_selection import KFold
 from sklearn.pipeline import Pipeline
 from keras.callbacks import ModelCheckpoint
 
-from v4_CSC_data_preprocess import window_data , window_data_general
+from v4_CSC_data_preprocess import window_data , window_data_general , time_cpu_data
 
 np.random.seed(7) # to make the result reproducable.
 
+state= False
 lock_back = 1
 no_features = 1
-data = window_data_general("./real_data_prepared/epouta/e101_epouta_csc_fi.csv" , lock_back)
-label_data = data['Cpu_t+'+ str(lock_back)]
-in_data = data.drop(['Cpu_t+' + str(lock_back)], axis=1)
+# data = window_data_general("./real_data_prepared/epouta/e101_epouta_csc_fi.csv" , lock_back)
+# label_data = data['Cpu_t+'+ str(lock_back)]
+# in_data = data.drop(['Cpu_t+' + str(lock_back)], axis=1)
+
+data = time_cpu_data("./real_data_prepared/epouta/e101_epouta_csc_fi.csv")
+label_data = data['Cpu']
+in_data  = data['int_time']
 
 ## train data split in order
 n = int(float(data.shape[0]) * 0.8)
@@ -79,7 +84,7 @@ print("\n max value in the train target and test target :", np.amax(train_labels
 # ## end of data loading
 #
 # ## model building
-model_batch_size= 1
+model_batch_size= 32
 
 def build_lstm_model( train_set , test_set , input_data):
     train_set = train_set.to_numpy()
@@ -94,8 +99,9 @@ def build_lstm_model( train_set , test_set , input_data):
 
     NN_model = Sequential()
 
-    NN_model.add(LSTM(5, batch_input_shape=(model_batch_size, train_set.shape[1], train_set.shape[2]) , stateful=True))  # input_dim = train_data.shape[1]
-    # NN_model.add(Dense(10, kernel_initializer='normal', activation='relu'))
+    NN_model.add(LSTM(100, input_shape=(train_set.shape[1], train_set.shape[2]) , stateful=state , return_sequences=True))  # input_dim = train_data.shape[1] , batch_input_shape=(model_batch_size,
+    NN_model.add(LSTM(100 , return_sequences=True) )
+    NN_model.add(LSTM(100))
     NN_model.add(Dense(1))
 
     # ## model compilation
@@ -112,16 +118,20 @@ Model_Checkpoint = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='mi
 
 # ## model fitting
 ##lstm:
-epochs_no = 1000
-for i in range(epochs_no):
-    loss_his = []
-    val_loss_his = []
-    model_training = NN_model.fit(train_data, train_labels, epochs=1, batch_size=model_batch_size, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
-    loss_his.append(model_training.history['loss'])
-    val_loss_his.append(model_training.history['val_loss'])
-    NN_model.reset_states()
-# print("Data saved in history: \n", print(model_training.history.keys()))
-# print("Model Training History: \n" , model_training.history , "\n")
+#for stateful :
+# epochs_no = 1000
+# for i in range(epochs_no):
+#     loss_his = []
+#     val_loss_his = []
+#     model_training = NN_model.fit(train_data, train_labels, epochs=1, batch_size=model_batch_size, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
+#     loss_his.append(model_training.history['loss'])
+#     val_loss_his.append(model_training.history['val_loss'])
+#     NN_model.reset_states()
+
+model_training = NN_model.fit(train_data, train_labels, epochs=1000, batch_size=model_batch_size, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
+
+print("Data saved in history: \n", print(model_training.history.keys()))
+print("Model Training History: \n" , model_training.history , "\n")
 #
 # ## model evaluation
 model_evaluation_test = NN_model.evaluate(test_data, test_labels, batch_size=model_batch_size , verbose=0)
@@ -143,7 +153,7 @@ def build_lstm_model_cv():
     NN_model = Sequential()
 
     #NN_model.add(LSTM(10, kernel_initializer='normal', input_shape=(train_data.shape[1], train_data.shape[2])))  # input_dim = train_data.shape[1]
-    NN_model.add(LSTM(5, batch_input_shape=(model_batch_size, train_data.shape[1], train_data.shape[2]), stateful=True))
+    NN_model.add(LSTM(5, batch_input_shape=(model_batch_size, train_data.shape[1], train_data.shape[2]), stateful=state))
     # NN_model.add(Dense(10, kernel_initializer='normal', activation='relu'))
     NN_model.add(Dense(1))
 
@@ -155,15 +165,15 @@ def build_lstm_model_cv():
 
 
 
-seed = 7
-np.random.seed(seed)
-# evaluate model with standardized dataset
-estimator = KerasRegressor(build_fn=build_lstm_model_cv, epochs=1000, batch_size=model_batch_size, verbose=0)
-
-kfold = KFold(n_splits=10, random_state=seed)
-scores = cross_val_score(estimator, in_data, label_data, cv=kfold)
-#print("Results: %.10f (%.10f) MSE" % (scores.mean(), scores.std()))
-print("Results: %.10f MSE" % (np.mean(scores)))
+# seed = 7
+# np.random.seed(seed)
+# # evaluate model with standardized dataset
+# estimator = KerasRegressor(build_fn=build_lstm_model_cv, epochs=1000, batch_size=model_batch_size, verbose=0)
+#
+# kfold = KFold(n_splits=10, random_state=seed)
+# scores = cross_val_score(estimator, in_data, label_data, cv=kfold)
+# #print("Results: %.10f (%.10f) MSE" % (scores.mean(), scores.std()))
+# print("Results: %.10f MSE" % (np.mean(scores)))
 # print(scores , "\n")
 
 #### with standerdize data :
@@ -194,10 +204,10 @@ print("Results: %.10f MSE" % (np.mean(scores)))
 
 #
 # ### neural network loss(MSE) plotting (https://machinelearningmastery.com/display-deep-learning-model-training-history-in-keras/)
-#plt.plot(model_training.history['loss'] , label='train')
-#plt.plot(model_training.history['val_loss'] , label='test')
-plt.plot(loss_his , label='train')
-plt.plot(val_loss_his , label='test')
+plt.plot(model_training.history['loss'] , label='train')
+plt.plot(model_training.history['val_loss'] , label='test')
+#plt.plot(loss_his , label='train')
+#plt.plot(val_loss_his , label='test')
 plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')

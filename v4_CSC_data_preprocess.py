@@ -64,6 +64,7 @@ def aggregate_data():
 def onefile_prepare(cpu_path, power_path):
     #cpu_data = pd.read_csv("./real_data/10-27/cpu.csv" , delimiter=';')
     #power_data = pd.read_csv("./real_data/10-27/power.csv", delimiter=';')
+    #print("IN ONE FILE PREPARE ...")
     cpu_data = pd.read_csv(cpu_path, delimiter=';')
     power_data = pd.read_csv(power_path, delimiter=';')
 
@@ -78,14 +79,18 @@ def onefile_prepare(cpu_path, power_path):
     #print(df.head)
     #print(len(df))
 
-    cpu_data = pd.concat([cpu_df, cpu_data], axis=1)
-    power_data = pd.concat([power_df, power_data], axis=1)
+    ## put time in the same base:
+    cpu_time_df = cpu_data['Time'].apply(pd.to_datetime , errors='coerce', utc=True )
+    power_time_df = power_data['Time'].apply(pd.to_datetime , errors='coerce', utc=True )
 
-    cpu_data.columns = ['Series', 'Full_Series', 'Time', 'Value']
-    cpu_data.drop(['Full_Series'], axis=1, inplace=True)
+    cpu_data = pd.concat([cpu_df, cpu_time_df ,cpu_data], axis=1)
+    power_data = pd.concat([power_df, power_time_df , power_data], axis=1)
 
-    power_data.columns = ['Series', 'Full_Series', 'Time', 'Value']
-    power_data.drop(['Full_Series'], axis=1, inplace=True)
+    cpu_data.columns = ['Series', 'Time','Full_Series', 'Old_Time', 'Value']
+    cpu_data.drop(['Full_Series' , 'Old_Time'], axis=1, inplace=True)
+
+    power_data.columns = ['Series','Time' ,'Full_Series', 'Old_Time', 'Value']
+    power_data.drop(['Full_Series' , 'Old_Time'], axis=1, inplace=True)
 
     cpu_data_list = []
     for series, df_series in cpu_data.groupby('Series'):
@@ -123,7 +128,10 @@ def onefile_prepare(cpu_path, power_path):
         print("\nSorry there is a problems with the files :( \n")
 
 
+#onefile_prepare("./real_data/epouta/10-27/cpu.csv", "./real_data/epouta/10-27/power.csv")
+
 def allfiles_prepare():
+    print("START PROCESSING ALL FILES ...")
     data_path = "./real_data/epouta/"
     dir_names = os.listdir(data_path)
     for i in range(len(dir_names)):
@@ -135,8 +143,10 @@ def allfiles_prepare():
 
         onefile_prepare(cpu_path, power_path)
 
+    print("END PROCESSING ALL FILES ...")
 
-#allfiles_prepare()
+
+allfiles_prepare()
 #test = pd.read_csv("./real_data/10-27/net.csv" , delimiter=';')
 
 def netfiles_prepare(): ## to be combined later with allfiles_prepare
@@ -224,19 +234,24 @@ def window_data_general(file_path , lock_back):
 #window_data_general("./real_data_prepared/epouta/e101_epouta_csc_fi.csv" , 3 )
 
 def time_cpu_data(file_path):
+    #print("IN TIME CPU ...")
     data = pd.read_csv(file_path, header=None)
     data.columns = ['Time', 'Cpu_t', 'Power']
-    data.drop(['Power'], axis=1, inplace=True)
-    print(type(data['Time']))
+    data.drop(['Power' , 'Time'], axis=1, inplace=True)
     #print(data['Time'])
-    df = data['Time']
+    #df = data['Time']
     #data['new Time'] = pd.to_datetime((data['Time']))
-    data['new Time'] = df.apply(pd.to_datetime , errors='coerce', utc=True ) #, errors='coerce'
+    # data['date_Time'] = df.apply(pd.to_datetime , errors='coerce', utc=True ) #, errors='coerce'
+    # data['time_string'] = data['date_Time'].apply(lambda x: x.strftime("%H:%M")) #%Y-%m-%d (%H:%M:%S)
+    data['int_time'] = pd.DataFrame( i for i in range(1, len(data['Cpu_t']) +1))
+    data['Cpu'] = data['Cpu_t']
+    data.drop(['Cpu_t'] , axis=1, inplace=True)
+    #print(data['date_Time'])
+    # print(data.iloc[57])
+    #print(data)
+    return data
 
-    print(data.iloc[56])
-    print(data.iloc[57])
-
-time_cpu_data("./real_data_prepared/epouta/e101_epouta_csc_fi.csv")
+#time_cpu_data("./real_data_prepared/epouta/e101_epouta_csc_fi.csv")
 
 
 
