@@ -1,6 +1,7 @@
 import glob
 import csv
 import os
+from math import sqrt
 import numpy as np
 import sklearn
 from sklearn.neural_network import MLPClassifier
@@ -22,19 +23,27 @@ from sklearn.pipeline import Pipeline
 from keras.callbacks import ModelCheckpoint
 
 from v4_CSC_data_preprocess import window_data , window_data_general , time_cpu_data
+from forecasting_metrics import rrse
 
 np.random.seed(7) # to make the result reproducable.
 
 state= False
-lock_back = 1
+lock_back = 3
 no_features = 1
-# data = window_data_general("./real_data_prepared/epouta/e101_epouta_csc_fi.csv" , lock_back)
-# label_data = data['Cpu_t+'+ str(lock_back)]
-# in_data = data.drop(['Cpu_t+' + str(lock_back)], axis=1)
+data = window_data_general("./real_data_prepared/epouta/e101_epouta_csc_fi.csv" , lock_back)
+## data scaling
+scaler = StandardScaler()
+data = scaler.fit_transform(data)
+data = pd.DataFrame(data)
+data.columns = ['Cpu_t+0', 'Cpu_t+1', 'Cpu_t+2', 'Cpu_t+3']
+##end of data scaling
 
-data = time_cpu_data("./real_data_prepared/epouta/e101_epouta_csc_fi.csv")
-label_data = data['Cpu']
-in_data  = data['int_time']
+label_data = data['Cpu_t+'+ str(lock_back)]
+in_data = data.drop(['Cpu_t+' + str(lock_back)], axis=1)
+
+# data = time_cpu_data("./real_data_prepared/epouta/e101_epouta_csc_fi.csv")
+# label_data = data['Cpu']
+# in_data  = data['int_time']
 
 ## train data split in order
 n = int(float(data.shape[0]) * 0.8)
@@ -69,15 +78,6 @@ print("\n min value in the train target and test target :", np.amin(train_labels
 print("\n max value in the train target and test target :", np.amax(train_labels) , " , " , np.amax(test_labels))
 # ##
 #
-# ## data scaling
-# scaler1 = StandardScaler()
-# scaler2 = StandardScaler()
-# train_data = scaler1.fit_transform(train_data)
-# test_data = scaler1.fit_transform(test_data)
-# train_target =scaler2.fit_transform(train_target)
-# test_target = scaler2.fit_transform(test_target)
-# ## end of data scaling
-#
 #
 # # print(cpu_df.shape)
 #
@@ -99,19 +99,21 @@ def build_lstm_model( train_set , test_set , input_data):
 
     NN_model = Sequential()
 
-    NN_model.add(LSTM(100, input_shape=(train_set.shape[1], train_set.shape[2]) , stateful=state , return_sequences=True))  # input_dim = train_data.shape[1] , batch_input_shape=(model_batch_size,
-    NN_model.add(LSTM(100 , return_sequences=True) )
-    NN_model.add(LSTM(100))
+    NN_model.add(LSTM(10, input_shape=(train_set.shape[1], train_set.shape[2]) , stateful=state ))  # input_dim = train_data.shape[1] , batch_input_shape=(model_batch_size, , return_sequences=True
+    #NN_model.add(LSTM(10 , activation='relu') )
+    # NN_model.add(LSTM(100))
     NN_model.add(Dense(1))
 
     # ## model compilation
-    NN_model.compile(loss='mean_squared_error',optimizer='adam')  # 'mean_absolute_error', 'mean_squared_error' , , metrics=['accuracy']
+    NN_model.compile(loss='mean_squared_error' ,optimizer='adam')  # 'mean_absolute_error', 'mean_squared_error' , , metrics=['accuracy']
 
 
     return NN_model , train_set , test_set , input_data
 
 
 NN_model , train_data , test_data , in_data = build_lstm_model(train_data , test_data , in_data)
+
+print("after reshape : ", train_data.shape , test_data.shape)
 
 
 Model_Checkpoint = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='min', verbose=1, save_best_only=True)
@@ -128,11 +130,15 @@ Model_Checkpoint = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='mi
 #     val_loss_his.append(model_training.history['val_loss'])
 #     NN_model.reset_states()
 
-model_training = NN_model.fit(train_data, train_labels, epochs=1000, batch_size=model_batch_size, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
+### for rrse loss function:
+train_labels = train_labels.to_numpy()
 
-print("Data saved in history: \n", print(model_training.history.keys()))
+model_training = NN_model.fit(train_data, train_labels, epochs=15000, batch_size=model_batch_size, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
+
+print("Data saved in history: \n", (model_training.history.keys()))
 print("Model Training History: \n" , model_training.history , "\n")
-#
+
+NN_model.save("final_model_ss_15e_relu.h5")
 # ## model evaluation
 model_evaluation_test = NN_model.evaluate(test_data, test_labels, batch_size=model_batch_size , verbose=0)
 model_evaluation_train = NN_model.evaluate(train_data, train_labels, batch_size=model_batch_size , verbose=0)
@@ -148,12 +154,54 @@ print("train loss evaluation _on the best model: \n",NN_model.metrics_names,  tr
 print("test loss evaluation _on the best model: \n",NN_model.metrics_names,  test_loss,"\n")
 
 
+## inverse of data scaling
+train_set = np.reshape(train_data, (train_data.shape[0], train_data.shape[1]))
+train_set_df = pd.DataFrame(train_set)
+train_label_df= pd.DataFrame(train_labels)
+train_set = pd.concat((train_set_df,train_label_df) , axis=1)
+
+test_set = np.reshape(test_data, (test_data.shape[0], test_data.shape[1]))
+test_set_df = pd.DataFrame(test_set)
+test_label_df= pd.DataFrame(test_labels.to_numpy())
+test_set = pd.concat((test_set_df, test_label_df) , axis=1)
+
+
+train_set = scaler.inverse_transform(train_set)
+test_set = scaler.inverse_transform(test_set)
+
+inversed_train_label = train_set[:,-1]
+#inversed_train_in = train_set[: , :-1]
+inversed_test_label = test_set[: ,-1]
+#inversed_test_in = train_set[: , :-1]
+
+predicted_train_label = NN_model.predict(train_data)
+predicted_train_label = pd.DataFrame(predicted_train_label)
+predicted_test_label = NN_model.predict(test_data)
+predicted_test_label = pd.DataFrame(predicted_test_label)
+
+inversed_predicted_train_label = pd.concat((train_set_df , predicted_train_label) , axis=1)
+inversed_predicted_train_label = scaler.inverse_transform(inversed_predicted_train_label)
+inversed_predicted_train_label = inversed_predicted_train_label[: , -1]
+
+inversed_predicted_test_label = pd.concat((test_set_df , predicted_test_label) , axis=1)
+inversed_predicted_test_label = scaler.inverse_transform(inversed_predicted_test_label)
+inversed_predicted_test_label = inversed_predicted_test_label[: , -1]
+
+print("\n min value in the train target and test target after rescaling:", np.amin(inversed_train_label) , " , " , np.amin(inversed_test_label))
+print("\n max value in the train target and test target after rescaling:", np.amax(inversed_train_label) , " , " , np.amax(inversed_test_label))
+
+train_score = mean_squared_error(inversed_train_label, inversed_predicted_train_label)
+test_score = mean_squared_error(inversed_test_label, inversed_predicted_test_label)
+
+print("After inverse scaling Train MSE: ", train_score , ", Test MSE: ", test_score)
+## end of inverse of data scaling
+
 ### evaluation using scikit-Learn cross validation (https://machinelearningmastery.com/regression-tutorial-keras-deep-learning-library-python/)
 def build_lstm_model_cv():
     NN_model = Sequential()
 
     #NN_model.add(LSTM(10, kernel_initializer='normal', input_shape=(train_data.shape[1], train_data.shape[2])))  # input_dim = train_data.shape[1]
-    NN_model.add(LSTM(5, batch_input_shape=(model_batch_size, train_data.shape[1], train_data.shape[2]), stateful=state))
+    NN_model.add(LSTM(10, input_shape=(train_data.shape[1], train_data.shape[2]), stateful=state))
     # NN_model.add(Dense(10, kernel_initializer='normal', activation='relu'))
     NN_model.add(Dense(1))
 
@@ -229,12 +277,17 @@ test_predict = NN_model.predict(test_data , batch_size=model_batch_size)
 
 fig = plt.figure()
 plt.subplot(1,2, 1)
-plt.plot(train_labels  , label='train actual')
-plt.plot(train_predict , label='train predict')
+# plt.plot(train_labels  , label='train actual')
+# plt.plot(train_predict , label='train predict')
+plt.plot(inversed_train_label  , label='train actual')
+plt.plot(inversed_predicted_train_label , label='train predict')
+
 
 plt.subplot(1, 2,2)
-plt.plot(test_labels, label='test actual')
-plt.plot(test_predict , label="test predict")
+# plt.plot(test_labels.to_numpy(), label='test actual')
+# plt.plot(test_predict , label="test predict")
+plt.plot(inversed_test_label, label='test actual')
+plt.plot(inversed_predicted_test_label , label="test predict")
 
 plt.title(' Actual and Predicted ')
 plt.ylabel('CPU')

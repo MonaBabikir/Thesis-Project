@@ -202,13 +202,13 @@ def build_lstm_model_cv():
 seed = 7
 np.random.seed(seed)
 # evaluate model with standardized dataset
-estimator = KerasRegressor(build_fn=build_model, epochs=1000, batch_size=1, verbose=0)
+estimator = KerasRegressor(build_fn=build_model, epochs=1000, batch_size=32, verbose=0)
 
 kfold = KFold(n_splits=10, random_state=seed)
 scores = cross_val_score(estimator, in_data, label_data, cv=kfold)
 #print("Results: %.10f (%.10f) MSE" % (scores.mean(), scores.std()))
 print("Results: %.10f MSE" % (np.mean(scores)))
-# print(scores , "\n")
+print(scores , "\n")
 
 #### with standerdize data :
 # estimators = []

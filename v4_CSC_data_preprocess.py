@@ -146,7 +146,7 @@ def allfiles_prepare():
     print("END PROCESSING ALL FILES ...")
 
 
-allfiles_prepare()
+#allfiles_prepare()
 #test = pd.read_csv("./real_data/10-27/net.csv" , delimiter=';')
 
 def netfiles_prepare(): ## to be combined later with allfiles_prepare
