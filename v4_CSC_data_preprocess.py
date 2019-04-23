@@ -61,7 +61,7 @@ def aggregate_data():
 
 
 
-def onefile_prepare(cpu_path, power_path):
+def onefile_prepare(cpu_path, power_path): ## Result is file with structure: time cpu power
     #cpu_data = pd.read_csv("./real_data/10-27/cpu.csv" , delimiter=';')
     #power_data = pd.read_csv("./real_data/10-27/power.csv", delimiter=';')
     #print("IN ONE FILE PREPARE ...")
@@ -150,6 +150,7 @@ def allfiles_prepare():
 #test = pd.read_csv("./real_data/10-27/net.csv" , delimiter=';')
 
 def netfiles_prepare(): ## to be combined later with allfiles_prepare
+    print("Starting Net Files Prepare ...")
     data_path = "./real_data/epouta/"
     dir_names = os.listdir(data_path)
     for i in range(len(dir_names)):
@@ -173,18 +174,26 @@ def netfiles_prepare(): ## to be combined later with allfiles_prepare
         value_df = value_df.applymap(lambda x: r(x))
         print(value_df.iloc[12829])
 
-        net_data = pd.concat([net_data , value_df] ,axis=1)
-        net_data.columns = ['Series' , 'Time' , 'OldValue' , 'Value']
-        net_data.drop(['OldValue'] , axis=1 , inplace=True)
+        ## put time in the same base:
+        net_time_df = net_data['Time'].apply(pd.to_datetime, errors='coerce', utc=True)
 
         net_series_df = pd.DataFrame(net_data['Series'])
 
         net_series_df = net_series_df.applymap(lambda x: x.split('.')[0])
 
-        net_data = pd.concat([net_series_df, net_data], axis=1)
+        net_data = pd.concat([net_series_df, net_time_df , value_df], axis=1)
+        net_data.columns = ['Series', 'Time', 'Value']
 
-        net_data.columns = ['Series', 'Full_Series', 'Time', 'Value']
-        net_data.drop(['Full_Series'], axis=1, inplace=True)
+        # net_data = pd.concat([net_data , value_df] ,axis=1)
+        # net_data.columns = ['Series' , 'Time' , 'OldValue' , 'Value']
+        # net_data.drop(['OldValue'] , axis=1 , inplace=True)
+        #
+        #
+        #
+        # net_data = pd.concat([net_series_df, net_data], axis=1)
+        #
+        # net_data.columns = ['Series', 'Full_Series', 'Time', 'Value']
+        # net_data.drop(['Full_Series'], axis=1, inplace=True)
 
         print(list(net_data))
         #print(net_data.head)
@@ -195,9 +204,10 @@ def netfiles_prepare(): ## to be combined later with allfiles_prepare
             agg_df = df_series.groupby(by='Time')['Value'].sum()
             # print(len(agg_df))
 
-            with open('./real_data_prepared/epouta/net/' + series + '.csv', 'a') as f:
+            with open('./real_data_prepared/epouta_net/' + series + '.csv', 'a') as f:
                  agg_df.to_csv(f, header=False)
 
+    print("End of Net Files Prepare.")
 
 #netfiles_prepare()
 

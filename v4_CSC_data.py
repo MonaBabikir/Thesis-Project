@@ -41,8 +41,16 @@ np.random.seed(7) # to make the result reproducable.
 # label_data = data['Cpu']
 # in_data = data['DateTime']
 
-lock_back = 1
-data = window_data_general("./real_data_prepared/epouta/e101_epouta_csc_fi.csv" , lock_back)
+lock_back = 3
+data = window_data_general("./real_data_prepared/epouta/e23_epouta_csc_fi.csv" , lock_back)
+
+## data scaling
+scaler = MinMaxScaler()
+data = scaler.fit_transform(data)
+data = pd.DataFrame(data)
+data.columns = ['Cpu_t+0', 'Cpu_t+1', 'Cpu_t+2', 'Cpu_t+3']
+##end of data scaling
+
 label_data = data['Cpu_t+'+ str(lock_back)]
 in_data = data.drop(['Cpu_t+' + str(lock_back)], axis=1)
 
@@ -158,8 +166,8 @@ print("Model Evaluation (testset evaluation) _on the final model: \n",NN_model.m
 print("the whole model evaluation _on the final model: \n" , NN_model.metrics_names,  model_evaluation_alldata , "\n")
 
 saved_best_model = load_model('best_model.h5')
-train_loss = saved_best_model.evaluate(train_data, train_labels, verbose=0 , batch_size=1)
-test_loss = saved_best_model.evaluate(test_data, test_labels, verbose=0 , batch_size=1)
+train_loss = saved_best_model.evaluate(train_data, train_labels, verbose=0 , batch_size=32)
+test_loss = saved_best_model.evaluate(test_data, test_labels, verbose=0 , batch_size=32)
 print("train loss evaluation _on the best model: \n",NN_model.metrics_names,  train_loss,"\n")
 print("test loss evaluation _on the best model: \n",NN_model.metrics_names,  test_loss,"\n")
 
@@ -181,6 +189,49 @@ print("test loss evaluation _on the best model: \n",NN_model.metrics_names,  tes
 # # Test the classifier with the test data
 # print("Test set score: %f\n\n###################" % mlp.score(x_test, y_test))
 
+## inverse of data scaling
+# train_set = np.reshape(train_data, (train_data.shape[0], train_data.shape[1]))
+# train_set_df = pd.DataFrame(train_set)
+train_set_df = pd.DataFrame(train_data.to_numpy())
+train_label_df= pd.DataFrame(train_labels.to_numpy())
+train_set = pd.concat((train_set_df,train_label_df) , axis=1)
+
+# test_set = np.reshape(test_data, (test_data.shape[0], test_data.shape[1]))
+# test_set_df = pd.DataFrame(test_set)
+test_set_df = pd.DataFrame(test_data.to_numpy())
+test_label_df= pd.DataFrame(test_labels.to_numpy())
+test_set = pd.concat((test_set_df, test_label_df) , axis=1)
+
+train_set = scaler.inverse_transform(train_set)
+test_set = scaler.inverse_transform(test_set)
+
+inversed_train_label = train_set[:,-1]
+#inversed_train_in = train_set[: , :-1]
+inversed_test_label = test_set[: ,-1]
+#inversed_test_in = train_set[: , :-1]
+
+predicted_train_label = NN_model.predict(train_data)
+predicted_train_label = pd.DataFrame(predicted_train_label)
+predicted_test_label = NN_model.predict(test_data)
+predicted_test_label = pd.DataFrame(predicted_test_label)
+
+inversed_predicted_train_label = pd.concat((train_set_df , predicted_train_label) , axis=1)
+inversed_predicted_train_label = scaler.inverse_transform(inversed_predicted_train_label)
+inversed_predicted_train_label = inversed_predicted_train_label[: , -1]
+
+inversed_predicted_test_label = pd.concat((test_set_df , predicted_test_label) , axis=1)
+inversed_predicted_test_label = scaler.inverse_transform(inversed_predicted_test_label)
+inversed_predicted_test_label = inversed_predicted_test_label[: , -1]
+
+print("\n min value in the train target and test target after rescaling:", np.amin(inversed_train_label) , " , " , np.amin(inversed_test_label))
+print("\n max value in the train target and test target after rescaling:", np.amax(inversed_train_label) , " , " , np.amax(inversed_test_label))
+
+train_score = mean_squared_error(inversed_train_label, inversed_predicted_train_label)
+test_score = mean_squared_error(inversed_test_label, inversed_predicted_test_label)
+
+print("After inverse scaling Train MSE: ", train_score , ", Test MSE: ", test_score)
+## end of inverse of data scaling
+
 
 ### evaluation using scikit-Learn cross validation (https://machinelearningmastery.com/regression-tutorial-keras-deep-learning-library-python/)
 def build_lstm_model_cv():
@@ -199,16 +250,16 @@ def build_lstm_model_cv():
 
 
 
-seed = 7
-np.random.seed(seed)
-# evaluate model with standardized dataset
-estimator = KerasRegressor(build_fn=build_model, epochs=1000, batch_size=32, verbose=0)
-
-kfold = KFold(n_splits=10, random_state=seed)
-scores = cross_val_score(estimator, in_data, label_data, cv=kfold)
-#print("Results: %.10f (%.10f) MSE" % (scores.mean(), scores.std()))
-print("Results: %.10f MSE" % (np.mean(scores)))
-print(scores , "\n")
+# seed = 7
+# np.random.seed(seed)
+# # evaluate model with standardized dataset
+# estimator = KerasRegressor(build_fn=build_model, epochs=1000, batch_size=32, verbose=0)
+#
+# kfold = KFold(n_splits=10, random_state=seed)
+# scores = cross_val_score(estimator, in_data, label_data, cv=kfold)
+# #print("Results: %.10f (%.10f) MSE" % (scores.mean(), scores.std()))
+# print("Results: %.10f MSE" % (np.mean(scores)))
+# print(scores , "\n")
 
 #### with standerdize data :
 # estimators = []
@@ -282,19 +333,29 @@ plt.show()
 # plt.xlabel('DataTime')
 # plt.show()
 
+# plt.plot(label_data , label='actual series')
+# plt.title('Actual Series')
+# plt.ylabel('CPU')
+# plt.xlabel('time')
+# plt.show()
 
 ### plot training/ test prediction
-train_predict = NN_model.predict(train_data ,  batch_size=1)
-test_predict = NN_model.predict(test_data , batch_size=1)
+train_predict = NN_model.predict(train_data )
+test_predict = NN_model.predict(test_data )
+
+train_labels = train_labels.to_numpy()
+test_labels = test_labels.to_numpy()
 
 fig = plt.figure()
 plt.subplot(1,2, 1)
 plt.plot(train_labels  , label='train actual')
 plt.plot(train_predict , label='train predict')
+#plt.yticks(np.arange(0, 0.8, step=0.1))
 
 plt.subplot(1, 2,2)
 plt.plot(test_labels, label='test actual')
 plt.plot(test_predict , label="test predict")
+#plt.yticks(np.arange(0, 0.8, step=0.1))
 
 plt.title(' Actual and Predicted ')
 plt.ylabel('CPU')
@@ -303,3 +364,12 @@ plt.legend(loc='upper left')
 plt.show()
 
 
+#### try another plotting
+data_predict = NN_model.predict(in_data)
+plt.plot(label_data  , label='actual timeseries')
+plt.plot(data_predict , label='predicted timeseries')
+plt.title(' Actual and Predicted timeseries')
+plt.ylabel('CPU')
+plt.xlabel('time')
+plt.legend(loc='upper right')
+plt.show()

@@ -30,7 +30,7 @@ np.random.seed(7) # to make the result reproducable.
 state= False
 lock_back = 3
 no_features = 1
-data = window_data_general("./real_data_prepared/epouta/e101_epouta_csc_fi.csv" , lock_back)
+data = window_data_general("./real_data_prepared/epouta/e23_epouta_csc_fi.csv" , lock_back)
 ## data scaling
 scaler = StandardScaler()
 data = scaler.fit_transform(data)
@@ -99,7 +99,7 @@ def build_lstm_model( train_set , test_set , input_data):
 
     NN_model = Sequential()
 
-    NN_model.add(LSTM(10, input_shape=(train_set.shape[1], train_set.shape[2]) , stateful=state ))  # input_dim = train_data.shape[1] , batch_input_shape=(model_batch_size, , return_sequences=True
+    NN_model.add(LSTM(10, input_shape=(train_set.shape[1], train_set.shape[2]) , stateful=state , activation='relu' ))  # input_dim = train_data.shape[1] , batch_input_shape=(model_batch_size, , return_sequences=True , activation='relu'
     #NN_model.add(LSTM(10 , activation='relu') )
     # NN_model.add(LSTM(100))
     NN_model.add(Dense(1))
@@ -133,12 +133,12 @@ Model_Checkpoint = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='mi
 ### for rrse loss function:
 train_labels = train_labels.to_numpy()
 
-model_training = NN_model.fit(train_data, train_labels, epochs=15000, batch_size=model_batch_size, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
+model_training = NN_model.fit(train_data, train_labels, epochs=1000, batch_size=model_batch_size, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
 
-print("Data saved in history: \n", (model_training.history.keys()))
+print("Data saved in history: \n", print(model_training.history.keys()))
 print("Model Training History: \n" , model_training.history , "\n")
 
-NN_model.save("final_model_ss_15e_relu.h5")
+NN_model.save("final_model.h5")
 # ## model evaluation
 model_evaluation_test = NN_model.evaluate(test_data, test_labels, batch_size=model_batch_size , verbose=0)
 model_evaluation_train = NN_model.evaluate(train_data, train_labels, batch_size=model_batch_size , verbose=0)
@@ -293,4 +293,15 @@ plt.title(' Actual and Predicted ')
 plt.ylabel('CPU')
 plt.xlabel('time')
 plt.legend(loc='upper left')
+plt.show()
+
+
+###another plotting
+data_predict = NN_model.predict(in_data)
+plt.plot(label_data  , label='actual timeseries')
+plt.plot(data_predict , label='predicted timeseries')
+plt.title(' Actual and Predicted timeseries')
+plt.ylabel('CPU')
+plt.xlabel('time')
+plt.legend(loc='upper right')
 plt.show()
