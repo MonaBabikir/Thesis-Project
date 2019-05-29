@@ -1,25 +1,9 @@
-import glob
-import csv
-import os
 import numpy as np
-import sklearn
-from sklearn.neural_network import MLPClassifier
-from sklearn.model_selection import GridSearchCV
 import matplotlib.pyplot as plt
-import itertools
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import mean_squared_error , mean_absolute_error
-from sklearn.model_selection import train_test_split
 import pandas as pd
 from sklearn.preprocessing import StandardScaler , MinMaxScaler
 from keras.models import Sequential, load_model
-from keras.layers import Dense , LSTM
-from keras.wrappers.scikit_learn import KerasRegressor
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import KFold
-from sklearn.pipeline import Pipeline
-from keras.callbacks import ModelCheckpoint
+
 
 import plotly
 import plotly.plotly as py
@@ -34,6 +18,7 @@ net_data = pd.read_csv("./real_data_prepared/epouta_net/e23_epouta_csc_fi.csv", 
 # data = pd.concat([net_data , cpu_data , pow_data], axis=1)
 # data.columns = ["Time" , "Net" , "CPU" , "Power"]
 # data.drop(["Time"] , axis=1 , inplace=True)
+
 net_data.columns = ["Time" , "Net"]
 net_data = net_data["Net"]
 
@@ -105,9 +90,9 @@ vf = np.vectorize(f)
 # y = data["Net"][0:2000]
 
 ##### with random numbers
-x = np.random.uniform(0.0 , 100.0 , 10000)
-y = np.random.uniform(11000 , 500000000 , 10000)
-zr = np.random.uniform(0.0 , 400.0 , 10000)
+x = np.random.uniform(0.0 , 100.0 , 2000)
+y = np.random.uniform(11000 , 500000000 , 2000)
+zr = np.random.uniform(0.0 , 400.0 , 2000)
 
 xdf = pd.DataFrame(x)
 ydf = pd.DataFrame(y)
@@ -137,7 +122,8 @@ X , Y , z = vf(X , Y)
 
 plt.contourf( X , Y , z)
 plt.colorbar()
-plt.show()
+plt.savefig("./COUNTOUR.png")
+#plt.show()
 
 
 # print(f(-0.89115062 , -0.62514045))

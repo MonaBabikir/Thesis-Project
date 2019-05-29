@@ -297,3 +297,16 @@ def prepare_disk_space(diskspace_filepath):
 #         c +=1
 #
 # print(c)
+
+##putting all data together
+# ins_name = "d40"
+# cpu_data = pd.read_csv("./real_data_prepared_Upp/CPU/" + ins_name + ".csv")
+# mem_data = pd.read_csv("./real_data_prepared_Upp/Mem/" + ins_name + ".csv")
+# disk_space_data = pd.read_csv("./real_data_prepared_Upp/Disk_space/" + ins_name + ".csv")
+# disk_io_data = pd.read_csv("./real_data_prepared_Upp/Disk_io/" + ins_name + ".csv")
+# temp_data = pd.read_csv("./real_data_prepared_Upp/Temp_mean/" + ins_name + ".csv")
+#
+# data = pd.concat([cpu_data , mem_data , disk_space_data , disk_io_data , temp_data ] , axis=1)
+# data.columns = ["Time" , "CPU" , "Time2" , "Mem" , "Time3" ,"Disk_Space" , "Time4" , "Disk_IO" , "Time5" , "Temp"]
+# data.drop(["Time" ,"Time2" , "Time3" , "Time4" , "Time5"] , axis=1 , inplace= True)
+# data.to_csv("data_docker.csv", index=False)

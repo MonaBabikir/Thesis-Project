@@ -35,35 +35,67 @@ data.drop(["Time"] , axis=1 , inplace=True)
 
 print("\n min value in label data", np.amin(data['Power']))
 print(data.shape)
-## data scaling
-scaler = StandardScaler()
-data = scaler.fit_transform(data)
-data = pd.DataFrame(data)
-data.columns = ["Net" , "CPU" , "Power"]
-#data.columns = [ "Net" , "Power"]
-##end of data scaling
 
-
+################################################
 label_data = data["Power"]
 in_data = data.drop(["Power"] , axis=1)
 
-label_data = label_data.to_numpy()
-in_data = in_data.to_numpy()
-
-
-# print(list(data))
-# print(data.head)
-
-## train data split in order
-# n = int(float(data.shape[0]) * 0.8)
-# train_data = in_data[:n]
-# train_labels = label_data[:n]
-# test_data = in_data[n:]
-# test_labels = label_data[n:]
-
-## train data split in randomly
-print(type(label_data))
 train_data, test_data, train_labels, test_labels = train_test_split(in_data, label_data, test_size=0.2 , random_state=42) #, random_state=42
+scaler = StandardScaler()
+train_set = pd.concat([train_data , train_labels] , axis=1)
+train_set = scaler.fit_transform(train_set)
+train_set = pd.DataFrame(train_set)
+train_set.columns = ["Net" , "CPU" , "Power"]
+train_labels =  train_set["Power"]
+train_data = train_set.drop(["Power"] , axis=1)
+
+test_set = pd.concat([test_data , test_labels] , axis=1)
+test_set = scaler.transform(test_set)
+test_set = pd.DataFrame(test_set)
+test_set.columns = ["Net" , "CPU" , "Power"]
+test_labels = test_set["Power"]
+test_data = test_set.drop(["Power"] , axis=1)
+
+train_labels = train_labels.to_numpy()
+train_data = train_data.to_numpy()
+test_labels = test_labels.to_numpy()
+test_data = test_data.to_numpy()
+
+
+### after scaling:
+data = scaler.transform(data)
+data = pd.DataFrame(data)
+data.columns = ["Net" , "CPU" , "Power"]
+label_data = data["Power"]
+in_data = data.drop(["Power"] , axis=1)
+
+
+################################################
+
+####ttttttttttttttttttttttttttt
+#
+# ## data scaling
+# scaler = StandardScaler()
+# data = scaler.fit_transform(data)
+# data = pd.DataFrame(data)
+# data.columns = ["Net" , "CPU" , "Power"]
+# #data.columns = [ "Net" , "Power"]
+# ##end of data scaling
+#
+#
+# label_data = data["Power"]
+# in_data = data.drop(["Power"] , axis=1)
+#
+# label_data = label_data.to_numpy()
+# in_data = in_data.to_numpy()
+#
+# ## train data split in randomly
+# print(type(label_data))
+# train_data, test_data, train_labels, test_labels = train_test_split(in_data, label_data, test_size=0.2 , random_state=42) #, random_state=42
+#
+# #####ttttttttttttttttt
+
+
 
 print(train_data)
 print(train_data.shape)

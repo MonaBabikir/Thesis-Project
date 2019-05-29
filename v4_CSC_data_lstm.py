@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import itertools
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error , mean_absolute_error
 from sklearn.model_selection import train_test_split
 import pandas as pd
 from sklearn.preprocessing import StandardScaler , MinMaxScaler
@@ -30,12 +30,14 @@ np.random.seed(7) # to make the result reproducable.
 state= False
 lock_back = 3
 no_features = 1
-data = window_data_general("./real_data_prepared/epouta/e23_epouta_csc_fi.csv" , lock_back)
+# data = window_data_general("./real_data_prepared/epouta/e23_epouta_csc_fi.csv" , lock_back)
+data = window_data_general("./real_data_prepared/epouta_30min/e11_epouta_csc_fi.csv" , lock_back)
 ## data scaling
-scaler = StandardScaler()
+scaler = MinMaxScaler(feature_range=(-1, 1)) #feature_range=(-1, 1)
 data = scaler.fit_transform(data)
 data = pd.DataFrame(data)
 data.columns = ['Cpu_t+0', 'Cpu_t+1', 'Cpu_t+2', 'Cpu_t+3']
+# data.columns = ['Cpu_t+0', 'Cpu_t+1' , 'Cpu_t+2', 'Cpu_t+3' , 'Cpu_t+4' , 'Cpu_t+5']
 ##end of data scaling
 
 label_data = data['Cpu_t+'+ str(lock_back)]
@@ -46,7 +48,7 @@ in_data = data.drop(['Cpu_t+' + str(lock_back)], axis=1)
 # in_data  = data['int_time']
 
 ## train data split in order
-n = int(float(data.shape[0]) * 0.8)
+n = int(float(data.shape[0]) * 0.7)
 train_data = in_data[:n]
 train_labels = label_data[:n]
 test_data = in_data[n:]
@@ -93,19 +95,23 @@ def build_lstm_model( train_set , test_set , input_data):
     # train_set = np.reshape(train_set, (train_set.shape[0], 1, train_set.shape[1]))
     # test_set = np.reshape(test_set, (test_set.shape[0], 1, test_set.shape[1]))
     # input_data = np.reshape(input_data, (input_data.shape[0], 1, input_data.shape[1]))
+
     train_set = np.reshape(train_set, (train_set.shape[0], lock_back, no_features))
     test_set = np.reshape(test_set, (test_set.shape[0], lock_back, no_features))
     input_data = np.reshape(input_data, (input_data.shape[0], lock_back, no_features))
 
+
     NN_model = Sequential()
 
-    NN_model.add(LSTM(10, input_shape=(train_set.shape[1], train_set.shape[2]) , stateful=state , activation='relu' ))  # input_dim = train_data.shape[1] , batch_input_shape=(model_batch_size, , return_sequences=True , activation='relu'
-    #NN_model.add(LSTM(10 , activation='relu') )
+    NN_model.add(LSTM(5, input_shape=(train_set.shape[1], train_set.shape[2]) , stateful=state , activation='tanh' , return_sequences=True ))  # input_dim = train_data.shape[1] , batch_input_shape=(model_batch_size, , return_sequences=True , activation='relu'
+    NN_model.add(LSTM(5 , activation='tanh' ) )
+    #.add(LSTM(5, activation='tanh'))
     # NN_model.add(LSTM(100))
-    NN_model.add(Dense(1))
+
+    NN_model.add(Dense(1 ))
 
     # ## model compilation
-    NN_model.compile(loss='mean_squared_error' ,optimizer='adam')  # 'mean_absolute_error', 'mean_squared_error' , , metrics=['accuracy']
+    NN_model.compile(loss='mean_squared_error' ,optimizer='sgd')  # 'mean_absolute_error', 'mean_squared_error' , , metrics=['accuracy']
 
 
     return NN_model , train_set , test_set , input_data
@@ -133,7 +139,9 @@ Model_Checkpoint = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='mi
 ### for rrse loss function:
 train_labels = train_labels.to_numpy()
 
-model_training = NN_model.fit(train_data, train_labels, epochs=1000, batch_size=model_batch_size, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
+#model_batch_size = train_data.shape[0]
+
+model_training = NN_model.fit(train_data, train_labels, epochs=10000, batch_size=model_batch_size, validation_data=(test_data, test_labels) , callbacks=[Model_Checkpoint] , shuffle=False) #validation_split = 0.2
 
 print("Data saved in history: \n", print(model_training.history.keys()))
 print("Model Training History: \n" , model_training.history , "\n")
@@ -194,22 +202,29 @@ train_score = mean_squared_error(inversed_train_label, inversed_predicted_train_
 test_score = mean_squared_error(inversed_test_label, inversed_predicted_test_label)
 
 print("After inverse scaling Train MSE: ", train_score , ", Test MSE: ", test_score)
+
+train_score_mae = mean_absolute_error(inversed_train_label, inversed_predicted_train_label)
+test_score_mae = mean_absolute_error(inversed_test_label, inversed_predicted_test_label)
+
+print("After inverse scaling Train MAE: ", train_score_mae , ", Test MAE: ", test_score_mae)
+
+
 ## end of inverse of data scaling
 
 ### evaluation using scikit-Learn cross validation (https://machinelearningmastery.com/regression-tutorial-keras-deep-learning-library-python/)
-def build_lstm_model_cv():
-    NN_model = Sequential()
-
-    #NN_model.add(LSTM(10, kernel_initializer='normal', input_shape=(train_data.shape[1], train_data.shape[2])))  # input_dim = train_data.shape[1]
-    NN_model.add(LSTM(10, input_shape=(train_data.shape[1], train_data.shape[2]), stateful=state))
-    # NN_model.add(Dense(10, kernel_initializer='normal', activation='relu'))
-    NN_model.add(Dense(1))
-
-    # ## model compilation
-    NN_model.compile(loss='mean_squared_error',optimizer='adam')  # 'mean_absolute_error', 'mean_squared_error' , , metrics=['accuracy']
-
-
-    return NN_model
+# def build_lstm_model_cv():
+#     NN_model = Sequential()
+#
+#     #NN_model.add(LSTM(10, kernel_initializer='normal', input_shape=(train_data.shape[1], train_data.shape[2])))  # input_dim = train_data.shape[1]
+#     NN_model.add(LSTM(10, input_shape=(train_data.shape[1], train_data.shape[2]), stateful=state))
+#     # NN_model.add(Dense(10, kernel_initializer='normal', activation='relu'))
+#     NN_model.add(Dense(1))
+#
+#     # ## model compilation
+#     NN_model.compile(loss='mean_squared_error',optimizer='adam')  # 'mean_absolute_error', 'mean_squared_error' , , metrics=['accuracy']
+#
+#
+#     return NN_model
 
 
 
@@ -298,7 +313,19 @@ plt.show()
 
 ###another plotting
 data_predict = NN_model.predict(in_data)
-plt.plot(label_data  , label='actual timeseries')
+
+data_in = np.reshape(in_data, (in_data.shape[0], in_data.shape[1]))
+data_in = pd.DataFrame(data_in)
+
+data_predict = pd.concat((data_in , pd.DataFrame(data_predict)) , axis=1)
+data_predict = scaler.inverse_transform(data_predict)
+data_predict = data_predict[: , -1]
+
+data_target = pd.concat((data_in , label_data) , axis=1)
+data_target = scaler.inverse_transform(data_target)
+data_target = data_target[: , -1]
+
+plt.plot(data_target  , label='actual timeseries')
 plt.plot(data_predict , label='predicted timeseries')
 plt.title(' Actual and Predicted timeseries')
 plt.ylabel('CPU')
